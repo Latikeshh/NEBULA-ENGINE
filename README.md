@@ -32,14 +32,13 @@
 ## 🚀 LAUNCH SEQUENCE
 
 1. Open [MISSION CONTROL / GitHub Actions](../../actions).
-2. Select **NEBULA // CONSTELLATION MATRIX**.
+2. Select **NEBULA // CONSTELLATION NETWORK**.
 3. Choose **Run workflow**.
-4. Select **QUICK** for 8 lanes or **DEEP** for 16 lanes.
-5. Open the run to inspect the dependency graph, job logs and artifacts.
+4. Open the run to inspect the multi-sector dependency graph, job logs and artifacts.
 
 ## 🧬 THE CONSTELLATION
 
-The matrix is not a decorative grid. It fans out into independent subsystem jobs and converges through signal analysis into mission control.
+The network is not a decorative grid. It fans out into independent diagnostic jobs, groups them into four operational sectors, and converges at mission control.
 
 | Domain | Scan signal |
 |---|---|
@@ -52,22 +51,20 @@ The matrix is not a decorative grid. It fans out into independent subsystem jobs
 | DOCUMENTATION | README, license and contributor guidance |
 | AUTOMATION | Workflow inventory |
 
-**QUICK** executes one lane per domain (8 jobs). **DEEP** executes both QUICK and DEEP profiles (16 jobs), adding run, branch and runner telemetry.
+The workflow contains 14 named jobs: one STAR GATE, eight independent diagnostic nodes, four sector synthesis nodes and one final MISSION CONTROL node.
 
 ## ◈ MISSION GRAPH
 
 ```text
                     ✦ STAR GATE
                          |
-              CONSTELLATION MATRIX
-                         |
-       +---------+-------+-------+---------+
-       |         |       |       |         |
-   REPOSITORY SECURITY BUILD DEPENDENCIES ...
-       |         |       |       |         |
-       +---------+-------+-------+---------+
-                         |
-                   SIGNAL ANALYSIS
+          +--------------+--------------+
+          |              |              |
+     REPOSITORY       SECURITY      SUPPLY CHAIN       OPERATIONS
+      /      \\        /     \\        /     \\         /       \\
+  CARTO  HISTORY  SECRET  WORKFLOW  DEPEND  RELEASE  DOCS  FOOTPRINT
+      \\      /        \\     /        \\     /         \\       /
+       +--------------+--------------+--------------+
                          |
                   MISSION CONTROL
 ```
@@ -79,7 +76,7 @@ GitHub renders the actual job graph from job dependencies. NEBULA shapes that gr
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | Full System Scan | Manual, push, weekly | Multi-stage diagnostics and report |
-| Constellation Matrix | Manual, pull request | Selectable 8/16-lane diagnostic matrix |
+| Constellation Network | Manual, pull request | 14-job multi-sector dependency graph |
 | Repository Intelligence | Push, manual | Repository profile |
 | Security Core | Push, pull request, manual | Lightweight secret-pattern scan |
 | Dependency Radar | Weekly, manual | Dependency inventory |
