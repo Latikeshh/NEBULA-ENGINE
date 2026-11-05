@@ -1,0 +1,48 @@
+name: "NEBULA · Workflow Doctor"
+on:
+  workflow_dispatch:
+  push:
+    paths: [".github/workflows/**"]
+  pull_request:
+    paths: [".github/workflows/**"]
+permissions:
+  contents: read
+jobs:
+  validate:
+    name: "WORKFLOW DOCTOR · YAML validation"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Install YAML parser"
+        run: python -m pip install --disable-pip-version-check pyyaml
+      - name: "Validate workflow syntax"
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import sys
+          import yaml
+
+          paths = sorted(Path(".github/workflows").glob("*.yml"))
+          paths += sorted(Path(".github/workflows").glob("*.yaml"))
+          if not paths:
+              print("No workflow files found.")
+              sys.exit(1)
+          errors = []
+          for path in paths:
+              try:
+                  yaml.safe_load(path.read_text(encoding="utf-8"))
+                  print(f"VALID  {path}")
+              except Exception as exc:
+                  errors.append((path, exc))
+                  print(f"INVALID {path}: {exc}")
+          print(f"\nChecked {len(paths)} workflow files; errors: {len(errors)}")
+          if errors:
+              sys.exit(1)
+          PY
+      - name: "Publish doctor summary"
+        if: always()
+        run: |
+          {
+            echo "# 🩺 Workflow Doctor"
+            echo "YAML validation finished. Review the preceding logs for per-file results."
+          } >> "$GITHUB_STEP_SUMMARY"
