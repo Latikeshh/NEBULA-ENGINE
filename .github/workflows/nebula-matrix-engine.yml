@@ -1,0 +1,127 @@
+name: "NEBULA · Matrix Engine"
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Execution profile"
+        type: choice
+        required: true
+        default: DEEP
+        options: [QUICK, DEEP]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nebula-matrix-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  matrix:
+    name: "${{ matrix.domain }} · ${{ matrix.profile }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        domain: [REPOSITORY, SECURITY, DEPENDENCIES, BUILD, PERFORMANCE, RELEASE, DOCUMENTATION, AUTOMATION]
+        profile: [QUICK, DEEP]
+    steps:
+      - name: "Initialize lane"
+        run: |
+          echo "## ${{ matrix.domain }} / ${{ matrix.profile }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Mission: ${{ github.workflow }}"
+          echo "Run: ${{ github.run_number }} · Attempt: ${{ github.run_attempt }}"
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "Execute operational scan"
+        env:
+          DOMAIN: ${{ matrix.domain }}
+          PROFILE: ${{ matrix.profile }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p nebula-report
+          case "$DOMAIN" in
+            REPOSITORY)
+              echo "Tracked files: $(git ls-files | wc -l)" | tee nebula-report/result.txt
+              echo "Directories: $(find . -type d -not -path './.git*' | wc -l)" | tee -a nebula-report/result.txt
+              git log -1 --format='Latest commit: %h %s' | tee -a nebula-report/result.txt || true
+              ;;
+            SECURITY)
+              if git grep -n -I -E 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' -- . ':!*.lock' > nebula-report/findings.txt; then
+                echo "Potential private-key marker found; inspect artifact." | tee nebula-report/result.txt
+                cat nebula-report/findings.txt
+                exit 1
+              else
+                echo "No private-key markers detected." | tee nebula-report/result.txt
+              fi
+              ;;
+            DEPENDENCIES)
+              find . -maxdepth 5 -type f \( -name 'package.json' -o -name 'package-lock.json' -o -name 'pubspec.yaml' -o -name 'pubspec.lock' -o -name 'pom.xml' -o -name 'build.gradle' -o -name 'build.gradle.kts' -o -name 'requirements.txt' -o -name 'pyproject.toml' \) -not -path './.git/*' | sort | tee nebula-report/result.txt
+              ;;
+            BUILD)
+              for f in package.json pubspec.yaml pom.xml build.gradle build.gradle.kts settings.gradle settings.gradle.kts Cargo.toml go.mod; do
+                [ ! -f "$f" ] || echo "Detected build manifest: $f"
+              done | tee nebula-report/result.txt
+              [ -s nebula-report/result.txt ] || echo "No supported root build manifest detected." > nebula-report/result.txt
+              ;;
+            PERFORMANCE)
+              echo "Repository footprint: $(du -sh . --exclude=.git | cut -f1)" | tee nebula-report/result.txt
+              echo "Tracked files: $(git ls-files | wc -l)" | tee -a nebula-report/result.txt
+              echo "Commit count: $(git rev-list --count HEAD)" | tee -a nebula-report/result.txt
+              ;;
+            RELEASE)
+              echo "Current ref: $GITHUB_REF" | tee nebula-report/result.txt
+              echo "Latest tag: $(git describe --tags --abbrev=0 2>/dev/null || echo 'No tags found')" | tee -a nebula-report/result.txt
+              ;;
+            DOCUMENTATION)
+              for f in README.md CONTRIBUTING.md CODE_OF_CONDUCT.md SECURITY.md LICENSE; do
+                [ -f "$f" ] && echo "PRESENT $f" || echo "MISSING $f"
+              done | tee nebula-report/result.txt
+              ;;
+            AUTOMATION)
+              find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) 2>/dev/null | sort | tee nebula-report/result.txt || true
+              ;;
+          esac
+          if [ "$PROFILE" = "DEEP" ]; then
+            printf '\nBranch: %s\nSHA: %s\nRunner: %s/%s\n' "$GITHUB_REF_NAME" "$GITHUB_SHA" "$RUNNER_OS" "$RUNNER_ARCH" >> nebula-report/result.txt
+          fi
+          cat nebula-report/result.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: "nebula-${{ matrix.domain }}-${{ matrix.profile }}"
+          path: nebula-report/
+          if-no-files-found: error
+          retention-days: 14
+
+  mission-control:
+    name: "MISSION CONTROL · Matrix aggregation"
+    if: always()
+    needs: [matrix]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Render mission summary"
+        env:
+          RESULT: ${{ needs.matrix.result }}
+        run: |
+          {
+            echo "# 🌌 NEBULA MATRIX ENGINE"
+            echo ""
+            echo "| Signal | Value |"
+            echo "|---|---|"
+            echo "| Matrix result | **$RESULT** |"
+            echo "| Domains | 8 |"
+            echo "| Profiles | QUICK · DEEP |"
+            echo "| Planned lanes | 16 |"
+            echo "| Run | $GITHUB_RUN_NUMBER |"
+            echo ""
+            echo "Inspect the expanded matrix lanes and download each lane artifact."
+          } >> "$GITHUB_STEP_SUMMARY"
