@@ -1,0 +1,36 @@
+name: "NEBULA · Repository Intelligence"
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  intelligence:
+    name: "REPOSITORY BRAIN · Inventory"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: "Build repository profile"
+        run: |
+          mkdir -p nebula
+          {
+            echo "# Repository Brain"
+            echo "Generated: $(date -u +%FT%TZ)"
+            echo "Branch: $GITHUB_REF_NAME"
+            echo "Tracked files: $(git ls-files | wc -l)"
+            echo "Commit count: $(git rev-list --count HEAD)"
+            echo ""
+            echo "## File extension map"
+            git ls-files | awk -F. 'NF>1 {print $NF}' | sort | uniq -c | sort -nr | head -20
+            echo ""
+            echo "## Recent commits"
+            git log -10 --date=short --format='- %h %ad %s'
+          } | tee nebula/repository-profile.md
+          cat nebula/repository-profile.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nebula-repository-profile
+          path: nebula/repository-profile.md
