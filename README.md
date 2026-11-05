@@ -1,65 +1,91 @@
 # 🌌 NEBULA-ENGINE
-### Autonomous workflows. Intelligent operations.
+### AUTONOMOUS WORKFLOWS · INTELLIGENT OPERATIONS
 
 <p align="center"><img src="assets/nebula-banner.svg" alt="NEBULA-ENGINE sci-fi command center" width="100%"></p>
 
 <p align="center">
-  <img alt="GitHub Actions" src="https://img.shields.io/badge/GitHub_Actions-Automation-2088FF?style=for-the-badge&logo=githubactions&logoColor=white">
-  <img alt="YAML" src="https://img.shields.io/badge/Workflow_Stack-YAML-8A2BE2?style=for-the-badge&logo=yaml&logoColor=white">
-  <img alt="Execution" src="https://img.shields.io/badge/Execution-Parallel_Matrix-00D4FF?style=for-the-badge">
+  <img alt="GitHub Actions" src="https://img.shields.io/badge/GitHub_Actions-AUTONOMOUS-2088FF?style=for-the-badge&logo=githubactions&logoColor=white">
+  <img alt="YAML" src="https://img.shields.io/badge/WORKFLOW_STACK-YAML-8A2BE2?style=for-the-badge&logo=yaml&logoColor=white">
+  <img alt="Execution" src="https://img.shields.io/badge/EXECUTION-CONSTELLATION_MATRIX-00D4FF?style=for-the-badge">
 </p>
 
-> A GitHub Actions operations universe: parallel execution lanes, multi-stage diagnostics, run summaries, and downloadable mission reports.
+<p align="center">
+  <a href="../../actions/workflows/nebula-matrix-engine.yml"><img alt="Constellation Matrix" src="../../actions/workflows/nebula-matrix-engine.yml/badge.svg"></a>
+  <a href="../../actions/workflows/nebula-full-scan.yml"><img alt="Full System Scan" src="../../actions/workflows/nebula-full-scan.yml/badge.svg"></a>
+  <a href="../../actions/workflows/security-core.yml"><img alt="Security Core" src="../../actions/workflows/security-core.yml/badge.svg"></a>
+</p>
 
-## ✨ Control room
+> A GitHub Actions operations universe. Every node is a real job. Every connection represents an execution dependency. Every mission produces inspectable evidence.
+
+## ✦ CONTROL ROOM
 
 | Subsystem | Mission |
 |---|---|
-| 🧠 Repository Brain | Structure, activity, metadata, project signals |
-| 🛡️ Security Core | Private-key patterns and risky committed paths |
-| ⚡ Matrix Engine | 16 visible parallel diagnostic jobs |
-| 🧪 Build Intelligence | Detect project ecosystems and build manifests |
-| 📡 Dependency Radar | Dependency manifest inventory |
-| 📊 Analytics Engine | Commit, file, and repository metrics |
-| 🧾 Report Center | Run summaries and downloadable artifacts |
+| 🧠 REPOSITORY BRAIN | Structure, activity, metadata and project signals |
+| 🛡️ SECURITY CORE | Private-key marker checks and sensitive-path review |
+| ⚡ CONSTELLATION MATRIX | Eight diagnostic domains with selectable execution depth |
+| 🧪 BUILD INTELLIGENCE | Detect project ecosystems and build manifests |
+| 📡 DEPENDENCY RADAR | Dependency and lockfile inventory |
+| 📊 SIGNAL ANALYSIS | Mission status and execution telemetry |
+| ◈ MISSION CONTROL | Final synthesis and run summary |
 
-## 🚀 Launch a mission
+## 🚀 LAUNCH SEQUENCE
 
-1. Open [GitHub Actions](../../actions).
-2. Select **NEBULA · Matrix Engine** or **NEBULA · Full System Scan**.
-3. Choose **Run workflow** when available.
-4. Open the run to inspect the expanded job graph and each lane's logs.
-5. Download reports from the run's **Artifacts** section.
+1. Open [MISSION CONTROL / GitHub Actions](../../actions).
+2. Select **NEBULA // CONSTELLATION MATRIX**.
+3. Choose **Run workflow**.
+4. Select **QUICK** for 8 lanes or **DEEP** for 16 lanes.
+5. Open the run to inspect the dependency graph, job logs and artifacts.
 
-## 🧬 Matrix engine
+## 🧬 THE CONSTELLATION
 
-Eight domains × two profiles = **16 independent jobs**.
+The matrix is not a decorative grid. It fans out into independent subsystem jobs and converges through signal analysis into mission control.
 
-| Domain | What it checks |
+| Domain | Scan signal |
 |---|---|
-| REPOSITORY | Tracked files, directories, recent activity |
-| SECURITY | Private-key marker patterns and sensitive filenames |
-| DEPENDENCIES | Package and lockfile discovery |
-| BUILD | Build manifests and ecosystem hints |
-| PERFORMANCE | Repository footprint and commit volume |
+| REPOSITORY | Tracked files, directory map and latest commit |
+| SECURITY | Private-key marker patterns |
+| DEPENDENCIES | Package manifests and lockfiles |
+| BUILD | Build-system manifest discovery |
+| PERFORMANCE | Repository footprint and commit history |
 | RELEASE | Current ref and latest tag |
-| DOCUMENTATION | README, license, contributor guidance |
+| DOCUMENTATION | README, license and contributor guidance |
 | AUTOMATION | Workflow inventory |
 
-Profiles: **QUICK** and **DEEP**. DEEP adds run metadata to each lane's report.
+**QUICK** executes one lane per domain (8 jobs). **DEEP** executes both QUICK and DEEP profiles (16 jobs), adding run, branch and runner telemetry.
 
-## 🛰️ Workflow fleet
+## ◈ MISSION GRAPH
+
+```text
+                    ✦ STAR GATE
+                         |
+              CONSTELLATION MATRIX
+                         |
+       +---------+-------+-------+---------+
+       |         |       |       |         |
+   REPOSITORY SECURITY BUILD DEPENDENCIES ...
+       |         |       |       |         |
+       +---------+-------+-------+---------+
+                         |
+                   SIGNAL ANALYSIS
+                         |
+                  MISSION CONTROL
+```
+
+GitHub renders the actual job graph from job dependencies. NEBULA shapes that graph through meaningful stages, parallel lanes and convergence—not fake jobs or artificial delays.
+
+## 🛰️ WORKFLOW FLEET
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| Full System Scan | Manual, push, weekly | Parallel subsystem diagnostics and report |
-| Matrix Engine | Manual, pull request | 16-cell matrix |
+| Full System Scan | Manual, push, weekly | Multi-stage diagnostics and report |
+| Constellation Matrix | Manual, pull request | Selectable 8/16-lane diagnostic matrix |
 | Repository Intelligence | Push, manual | Repository profile |
 | Security Core | Push, pull request, manual | Lightweight secret-pattern scan |
 | Dependency Radar | Weekly, manual | Dependency inventory |
 | Workflow Doctor | Workflow changes, manual | YAML syntax validation |
 
-## 📁 Layout
+## 📁 SYSTEM LAYOUT
 
 ```text
 .github/workflows/
@@ -69,23 +95,27 @@ Profiles: **QUICK** and **DEEP**. DEEP adds run metadata to each lane's report.
   security-core.yml
   dependency-radar.yml
   workflow-doctor.yml
+assets/
+  nebula-banner.svg
 README.md
 ```
 
-## 🔐 Execution model
+## 🔐 EXECUTION PROTOCOL
 
 - Read-only repository permissions by default.
-- No secret values are printed; pattern findings show paths and lines only.
-- Dependency auditing is limited to manifest discovery unless an ecosystem is configured.
+- No secret values are printed.
+- Security pattern checks are lightweight checks, not a replacement for dedicated secret scanning.
+- Dependency radar currently inventories manifests; it does not claim vulnerability analysis.
+- Build intelligence currently detects ecosystems; project-specific build commands must be configured.
 - Matrix parallelism depends on GitHub runner availability and account limits.
 - Scheduled runs may be delayed by GitHub.
-- GitHub Actions has runtime limits; this project does not use infinite loops or fake activity.
+- No infinite loops, fake activity or decorative jobs.
 
-## 🗺️ Roadmap
+## 🗺️ NEXT SYSTEMS
 
-- [x] NEBULA identity and control-room documentation
-- [x] Parallel matrix engine
 - [ ] Cross-run trend snapshots
+- [ ] Real ecosystem-specific build and test adapters
+- [ ] Dedicated code and dependency security scanning
 - [ ] Release readiness scorecards
 - [ ] Reusable workflow components
 
