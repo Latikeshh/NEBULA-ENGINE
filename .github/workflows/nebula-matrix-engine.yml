@@ -1,4 +1,4 @@
-name: "NEBULA // CONSTELLATION MATRIX"
+name: "NEBULA // CONSTELLATION NETWORK"
 
 on:
   workflow_dispatch:
@@ -20,166 +20,272 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  boot:
-    name: "✦ 00 · STAR GATE / INITIALIZATION"
+  star-gate:
+    name: "✦ STAR GATE / CORE INITIALIZATION"
     runs-on: ubuntu-latest
     outputs:
-      profiles: ${{ github.event_name == 'workflow_dispatch' && inputs.profile == 'DEEP' && '["QUICK","DEEP"]' || '["QUICK"]' }}
+      profile: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'QUICK' }}
     steps:
-      - name: "Open mission channel"
+      - name: "Initialize mission"
         run: |
           {
-            echo "# ✦ NEBULA CONSTELLATION"
+            echo "# ✦ NEBULA CONSTELLATION NETWORK"
             echo ""
-            echo "| Mission signal | Value |"
+            echo "| Telemetry | Signal |"
             echo "|---|---|"
+            echo "| Mission | $GITHUB_RUN_NUMBER |"
             echo "| Trigger | $GITHUB_EVENT_NAME |"
             echo "| Ref | $GITHUB_REF |"
             echo "| Commit | $GITHUB_SHA |"
-            echo "| Runner | $RUNNER_OS / $RUNNER_ARCH |"
-            echo ""
-            echo "Star gate initialized. Subsystems are cleared for launch."
+            echo "| Profile | ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'QUICK' }} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  matrix:
-    name: "${{ matrix.domain }} / ${{ matrix.profile }}"
-    needs: boot
+  repo-cartography:
+    name: "◉ REPOSITORY / CARTOGRAPHY"
+    needs: star-gate
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      max-parallel: 8
-      matrix:
-        domain: [REPOSITORY, SECURITY, DEPENDENCIES, BUILD, PERFORMANCE, RELEASE, DOCUMENTATION, AUTOMATION]
-        profile: ${{ fromJSON(needs.boot.outputs.profiles) }}
     steps:
-      - name: "Initialize subsystem"
-        run: |
-          echo "## ${{ matrix.domain }} · ${{ matrix.profile }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Subsystem online · run $GITHUB_RUN_NUMBER · attempt $GITHUB_RUN_ATTEMPT"
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: "Execute subsystem scan"
-        env:
-          DOMAIN: ${{ matrix.domain }}
-          PROFILE: ${{ matrix.profile }}
-        shell: bash
+      - name: "Map tracked structure"
         run: |
-          set -uo pipefail
-          mkdir -p "nebula-report/$DOMAIN"
-          REPORT="nebula-report/$DOMAIN/result.txt"
-          case "$DOMAIN" in
-            REPOSITORY)
-              {
-                echo "Tracked files: $(git ls-files | wc -l)"
-                echo "Directories: $(find . -type d -not -path './.git*' | wc -l)"
-                git log -1 --format='Latest commit: %h %s' || true
-              } | tee "$REPORT"
-              ;;
-            SECURITY)
-              if git grep -n -I -E 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' -- . ':!*.lock' > "nebula-report/$DOMAIN/findings.txt"; then
-                echo "Potential private-key marker found. Inspect findings artifact." | tee "$REPORT"
-                cat "nebula-report/$DOMAIN/findings.txt"
-                exit 1
-              else
-                echo "No private-key markers detected in tracked text." | tee "$REPORT"
-              fi
-              ;;
-            DEPENDENCIES)
-              find . -maxdepth 6 -type f \( -name 'package.json' -o -name '*lock*' -o -name 'pubspec.yaml' -o -name 'pom.xml' -o -name 'build.gradle' -o -name 'build.gradle.kts' -o -name 'requirements.txt' -o -name 'pyproject.toml' -o -name 'Cargo.toml' -o -name 'go.mod' \) -not -path './.git/*' | sort | tee "$REPORT"
-              ;;
-            BUILD)
-              for f in package.json pubspec.yaml pom.xml build.gradle build.gradle.kts settings.gradle settings.gradle.kts Cargo.toml go.mod Makefile CMakeLists.txt; do
-                [ ! -f "$f" ] || echo "Detected build manifest: $f"
-              done | tee "$REPORT"
-              [ -s "$REPORT" ] || echo "No supported root build manifest detected." > "$REPORT"
-              ;;
-            PERFORMANCE)
-              {
-                echo "Repository footprint: $(du -sh . --exclude=.git | cut -f1)"
-                echo "Tracked files: $(git ls-files | wc -l)"
-                echo "Commit count: $(git rev-list --count HEAD)"
-              } | tee "$REPORT"
-              ;;
-            RELEASE)
-              {
-                echo "Current ref: $GITHUB_REF"
-                echo "Latest tag: $(git describe --tags --abbrev=0 2>/dev/null || echo 'No tags found')"
-              } | tee "$REPORT"
-              ;;
-            DOCUMENTATION)
-              for f in README.md CONTRIBUTING.md CODE_OF_CONDUCT.md SECURITY.md LICENSE; do
-                [ -f "$f" ] && echo "PRESENT $f" || echo "MISSING $f"
-              done | tee "$REPORT"
-              ;;
-            AUTOMATION)
-              find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) 2>/dev/null | sort | tee "$REPORT" || true
-              ;;
-          esac
-          if [ "$PROFILE" = "DEEP" ]; then
-            {
-              echo ""
-              echo "Branch: $GITHUB_REF_NAME"
-              echo "SHA: $GITHUB_SHA"
-              echo "Runner: $RUNNER_OS/$RUNNER_ARCH"
-            } >> "$REPORT"
-          fi
-          cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
-
+          mkdir -p reports
+          {
+            echo "# Repository Cartography"
+            echo "Tracked files: $(git ls-files | wc -l)"
+            echo "Directories: $(find . -type d -not -path './.git*' | wc -l)"
+            echo "Top-level paths:"
+            git ls-files | awk -F/ '{print $1}' | sort -u
+          } | tee reports/cartography.md
+          cat reports/cartography.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
-          name: "nebula-${{ matrix.domain }}-${{ matrix.profile }}"
-          path: nebula-report/
-          if-no-files-found: error
-          retention-days: 14
+          name: nebula-cartography
+          path: reports/cartography.md
 
-  signal-analysis:
-    name: "✧ 02 · SIGNAL ANALYSIS"
-    if: always()
-    needs: [boot, matrix]
+  history-intelligence:
+    name: "◉ REPOSITORY / HISTORY INTELLIGENCE"
+    needs: star-gate
     runs-on: ubuntu-latest
     steps:
-      - name: "Evaluate subsystem constellation"
-        env:
-          MATRIX_RESULT: ${{ needs.matrix.result }}
-          PROFILE_SET: ${{ needs.boot.outputs.profiles }}
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: "Analyze commit signals"
         run: |
+          mkdir -p reports
           {
-            echo "# ✧ SIGNAL ANALYSIS"
+            echo "# History Intelligence"
+            echo "Commit count: $(git rev-list --count HEAD)"
+            echo "Contributors: $(git log --format='%an' | sort -u | wc -l)"
+            echo "Recent commits:"
+            git log -8 --date=short --format='- %h · %ad · %s'
+          } | tee reports/history.md
+          cat reports/history.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nebula-history
+          path: reports/history.md
+
+  secret-watch:
+    name: "⬡ SECURITY / SECRET WATCH"
+    needs: star-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Inspect tracked text for private-key markers"
+        shell: bash
+        run: |
+          mkdir -p reports
+          if git grep -n -I -E 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' -- . ':!*.lock' > reports/secret-findings.txt; then
+            echo "Potential private-key marker detected. Inspect the artifact." | tee reports/secrets.md
+            cat reports/secret-findings.txt
+            exit 1
+          else
+            echo "No private-key markers detected in tracked text files." | tee reports/secrets.md
+          fi
+          cat reports/secrets.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nebula-secret-watch
+          path: reports/
+
+  workflow-integrity:
+    name: "⬡ SECURITY / WORKFLOW INTEGRITY"
+    needs: star-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Inspect workflow inventory and permission declarations"
+        run: |
+          mkdir -p reports
+          {
+            echo "# Workflow Integrity Inventory"
+            for f in .github/workflows/*.yml .github/workflows/*.yaml; do
+              [ -f "$f" ] || continue
+              echo ""
+              echo "## $f"
+              grep -nE '^(permissions:|  [a-z_]+: (read|write|none)|uses:|    uses:|on:)' "$f" || true
+            done
+          } | tee reports/workflow-integrity.md
+          cat reports/workflow-integrity.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nebula-workflow-integrity
+          path: reports/workflow-integrity.md
+
+  dependency-atlas:
+    name: "◇ SUPPLY CHAIN / DEPENDENCY ATLAS"
+    needs: star-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Discover package manifests and lockfiles"
+        run: |
+          mkdir -p reports
+          find . -maxdepth 7 -type f \( -name package.json -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name pubspec.yaml -o -name pubspec.lock -o -name pom.xml -o -name build.gradle -o -name build.gradle.kts -o -name requirements.txt -o -name pyproject.toml -o -name Cargo.toml -o -name go.mod \) -not -path './.git/*' | sort | tee reports/dependency-atlas.txt
+          cat reports/dependency-atlas.txt >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nebula-dependency-atlas
+          path: reports/dependency-atlas.txt
+
+  release-orbit:
+    name: "◇ SUPPLY CHAIN / RELEASE ORBIT"
+    needs: star-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: "Inspect release signals"
+        run: |
+          mkdir -p reports
+          {
+            echo "# Release Orbit"
+            echo "Ref: $GITHUB_REF"
+            echo "Latest tag: $(git describe --tags --abbrev=0 2>/dev/null || echo 'No tags found')"
+            echo "Tags available: $(git tag | wc -l)"
+          } | tee reports/release-orbit.md
+          cat reports/release-orbit.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nebula-release-orbit
+          path: reports/release-orbit.md
+
+  documentation-signal:
+    name: "⌘ OPERATIONS / DOCUMENTATION SIGNAL"
+    needs: star-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Check project documentation"
+        run: |
+          mkdir -p reports
+          {
+            echo "# Documentation Signal"
+            for f in README.md CONTRIBUTING.md CODE_OF_CONDUCT.md SECURITY.md LICENSE; do
+              [ -f "$f" ] && echo "PRESENT · $f" || echo "MISSING · $f"
+            done
             echo ""
-            echo "| Signal | Reading |"
-            echo "|---|---|"
-            echo "| Matrix status | $MATRIX_RESULT |"
-            echo "| Active profiles | $PROFILE_SET |"
-            echo "| Domains | 8 |"
-            echo "| Planned lanes | 8 × selected profiles |"
-            echo "| Run | $GITHUB_RUN_NUMBER |"
-            echo ""
-            echo "Subsystem results are ready for mission control."
-          } >> "$GITHUB_STEP_SUMMARY"
+            echo "Markdown files: $(find . -type f -name '*.md' -not -path './.git/*' | wc -l)"
+          } | tee reports/documentation.md
+          cat reports/documentation.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nebula-documentation
+          path: reports/documentation.md
+
+  footprint-scan:
+    name: "⌘ OPERATIONS / FOOTPRINT SCAN"
+    needs: star-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Measure repository footprint"
+        run: |
+          mkdir -p reports
+          {
+            echo "# Footprint Scan"
+            echo "Working tree size: $(du -sh . --exclude=.git | cut -f1)"
+            echo "Tracked file count: $(git ls-files | wc -l)"
+            echo "Largest tracked files:"
+            git ls-files -z | xargs -0 -r du -h 2>/dev/null | sort -h | tail -10
+          } | tee reports/footprint.md
+          cat reports/footprint.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nebula-footprint
+          path: reports/footprint.md
+
+  repository-sector:
+    name: "◉ SECTOR / REPOSITORY SYNTHESIS"
+    if: always()
+    needs: [repo-cartography, history-intelligence]
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "# Repository sector" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Cartography | ${{ needs.repo-cartography.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| History intelligence | ${{ needs.history-intelligence.result }} |" >> "$GITHUB_STEP_SUMMARY"
+
+  security-sector:
+    name: "⬡ SECTOR / SECURITY SYNTHESIS"
+    if: always()
+    needs: [secret-watch, workflow-integrity]
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "# Security sector" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Secret watch | ${{ needs.secret-watch.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Workflow integrity | ${{ needs.workflow-integrity.result }} |" >> "$GITHUB_STEP_SUMMARY"
+
+  supply-sector:
+    name: "◇ SECTOR / SUPPLY CHAIN SYNTHESIS"
+    if: always()
+    needs: [dependency-atlas, release-orbit]
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "# Supply-chain sector" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Dependency atlas | ${{ needs.dependency-atlas.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Release orbit | ${{ needs.release-orbit.result }} |" >> "$GITHUB_STEP_SUMMARY"
+
+  operations-sector:
+    name: "⌘ SECTOR / OPERATIONS SYNTHESIS"
+    if: always()
+    needs: [documentation-signal, footprint-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "# Operations sector" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Documentation | ${{ needs.documentation-signal.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Footprint | ${{ needs.footprint-scan.result }} |" >> "$GITHUB_STEP_SUMMARY"
 
   mission-control:
-    name: "◈ 03 · MISSION CONTROL / FINAL SYNTHESIS"
+    name: "✧ MISSION CONTROL / FINAL CONVERGENCE"
     if: always()
-    needs: [boot, matrix, signal-analysis]
+    needs: [repository-sector, security-sector, supply-sector, operations-sector]
     runs-on: ubuntu-latest
     steps:
-      - name: "Close constellation"
+      - name: "Synthesize all sectors"
         env:
-          BOOT_RESULT: ${{ needs.boot.result }}
-          MATRIX_RESULT: ${{ needs.matrix.result }}
-          ANALYSIS_RESULT: ${{ needs.signal-analysis.result }}
+          REPOSITORY: ${{ needs.repository-sector.result }}
+          SECURITY: ${{ needs.security-sector.result }}
+          SUPPLY: ${{ needs.supply-sector.result }}
+          OPERATIONS: ${{ needs.operations-sector.result }}
         run: |
           {
-            echo "# ◈ NEBULA MISSION CONTROL"
+            echo "# ✧ NEBULA MISSION CONTROL"
             echo ""
-            echo "| Stage | Result |"
+            echo "| Sector | Signal |"
             echo "|---|---|"
-            echo "| Star gate | $BOOT_RESULT |"
-            echo "| Constellation matrix | $MATRIX_RESULT |"
-            echo "| Signal analysis | $ANALYSIS_RESULT |"
+            echo "| Repository | $REPOSITORY |"
+            echo "| Security | $SECURITY |"
+            echo "| Supply chain | $SUPPLY |"
+            echo "| Operations | $OPERATIONS |"
             echo ""
-            echo "Mission synthesis complete. Inspect individual subsystem jobs and artifacts for evidence."
+            echo "All sectors have reported. Inspect individual job logs and artifacts for evidence."
           } >> "$GITHUB_STEP_SUMMARY"
