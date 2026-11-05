@@ -2,13 +2,6 @@ name: "NEBULA // CONSTELLATION NETWORK"
 
 on:
   workflow_dispatch:
-    inputs:
-      profile:
-        description: "Mission depth"
-        type: choice
-        required: true
-        default: QUICK
-        options: [QUICK, DEEP]
   pull_request:
     branches: [main]
 
