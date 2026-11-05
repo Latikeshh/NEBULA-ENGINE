@@ -10,9 +10,9 @@
 </p>
 
 <p align="center">
-  <a href="../../actions/workflows/nebula-matrix-engine.yml"><img alt="Constellation Matrix" src="../../actions/workflows/nebula-matrix-engine.yml/badge.svg"></a>
-  <a href="../../actions/workflows/nebula-full-scan.yml"><img alt="Full System Scan" src="../../actions/workflows/nebula-full-scan.yml/badge.svg"></a>
-  <a href="../../actions/workflows/security-core.yml"><img alt="Security Core" src="../../actions/workflows/security-core.yml/badge.svg"></a>
+  <a href="https://github.com/Latikeshh/NEBULA-ENGINE/actions/workflows/nebula-matrix-engine.yml"><img alt="Constellation Matrix" src="https://github.com/Latikeshh/NEBULA-ENGINE/actions/workflows/nebula-matrix-engine.yml/badge.svg"></a>
+  <a href="https://github.com/Latikeshh/NEBULA-ENGINE/actions/workflows/nebula-full-scan.yml"><img alt="Full System Scan" src="https://github.com/Latikeshh/NEBULA-ENGINE/actions/workflows/nebula-full-scan.yml/badge.svg"></a>
+  <a href="https://github.com/Latikeshh/NEBULA-ENGINE/actions/workflows/security-core.yml"><img alt="Security Core" src="https://github.com/Latikeshh/NEBULA-ENGINE/actions/workflows/security-core.yml/badge.svg"></a>
 </p>
 
 > A GitHub Actions operations universe. Every node is a real job. Every connection represents an execution dependency. Every mission produces inspectable evidence.
