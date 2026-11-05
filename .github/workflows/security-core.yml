@@ -1,0 +1,38 @@
+name: "NEBULA · Security Core"
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  secret-patterns:
+    name: "SECURITY CORE · Secret pattern scan"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Scan tracked content"
+        shell: bash
+        run: |
+          mkdir -p security-report
+          FAILED=0
+          echo "# Security Core" > security-report/security.md
+          echo "Lightweight pattern scan; not a replacement for dedicated secret scanning." >> security-report/security.md
+          if git grep -n -I -E 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY'; then
+            echo "Potential private-key marker detected; inspect logs carefully." | tee -a security-report/security.md
+            FAILED=1
+          else
+            echo "No private-key markers detected in tracked text files." | tee -a security-report/security.md
+          fi
+          echo "" >> security-report/security.md
+          echo "Tracked sensitive-name candidates:" >> security-report/security.md
+          git ls-files | grep -Ei '(^|/)(\.env|id_rsa|id_ed25519|credentials\.json|secrets?\.(json|ya?ml))$' | tee -a security-report/security.md || true
+          cat security-report/security.md >> "$GITHUB_STEP_SUMMARY"
+          exit "$FAILED"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nebula-security-report
+          path: security-report/
