@@ -1,6 +1,8 @@
 # 🌌 NEBULA-ENGINE
 ### Autonomous workflows. Intelligent operations.
 
+<p align="center"><img src="assets/nebula-banner.svg" alt="NEBULA-ENGINE sci-fi command center" width="100%"></p>
+
 <p align="center">
   <img alt="GitHub Actions" src="https://img.shields.io/badge/GitHub_Actions-Automation-2088FF?style=for-the-badge&logo=githubactions&logoColor=white">
   <img alt="YAML" src="https://img.shields.io/badge/Workflow_Stack-YAML-8A2BE2?style=for-the-badge&logo=yaml&logoColor=white">
