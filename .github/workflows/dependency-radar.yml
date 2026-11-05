@@ -1,0 +1,27 @@
+name: "NEBULA · Dependency Radar"
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 5 * * 1"
+permissions:
+  contents: read
+jobs:
+  radar:
+    name: "DEPENDENCY RADAR · Manifest inventory"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Discover dependency ecosystems"
+        run: |
+          mkdir -p radar
+          {
+            echo "# Dependency Radar"
+            echo "Generated: $(date -u +%FT%TZ)"
+            echo ""
+            find . -maxdepth 6 -type f \( -name package.json -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name pubspec.yaml -o -name pubspec.lock -o -name pom.xml -o -name build.gradle -o -name build.gradle.kts -o -name requirements.txt -o -name pyproject.toml -o -name Cargo.toml -o -name go.mod \) -not -path './.git/*' | sort
+          } | tee radar/dependency-inventory.md
+          cat radar/dependency-inventory.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nebula-dependency-inventory
+          path: radar/dependency-inventory.md
