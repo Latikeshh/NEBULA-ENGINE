@@ -1,0 +1,251 @@
+name: "NEBULA · Full System Scan"
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 4 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nebula-full-scan-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  boot:
+    name: "01 · BOOT SEQUENCE"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: "Initialize mission telemetry"
+        run: |
+          {
+            echo "# 🚀 NEBULA / FULL SYSTEM SCAN"
+            echo ""
+            echo "| Mission telemetry | Value |"
+            echo "|---|---|"
+            echo "| Run | $GITHUB_RUN_NUMBER |"
+            echo "| Trigger | $GITHUB_EVENT_NAME |"
+            echo "| Ref | $GITHUB_REF |"
+            echo "| Commit | $GITHUB_SHA |"
+            echo "| Runner | $RUNNER_OS / $RUNNER_ARCH |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  repository-intelligence:
+    name: "02 · REPOSITORY INTELLIGENCE"
+    needs: boot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: "Map repository"
+        run: |
+          mkdir -p reports
+          {
+            echo "# Repository intelligence"
+            echo "Tracked files: $(git ls-files | wc -l)"
+            echo "Commit history: $(git rev-list --count HEAD)"
+            echo "Repository footprint: $(du -sh . --exclude=.git | cut -f1)"
+            echo ""
+            echo "## Top-level layout"
+            find . -maxdepth 2 -not -path './.git*' -not -path './.github*' -print | sort | head -100
+          } | tee reports/repository.txt
+          cat reports/repository.txt >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nebula-repository-intelligence
+          path: reports/repository.txt
+
+  security-inspection:
+    name: "03 · SECURITY INSPECTION"
+    needs: boot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Inspect tracked files"
+        shell: bash
+        run: |
+          mkdir -p reports
+          echo "# Security inspection" > reports/security.txt
+          FAILED=0
+          if git grep -n -I -E 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' -- . ':!*.lock' > reports/private-key-findings.txt; then
+            echo "Potential private-key marker detected:" | tee -a reports/security.txt
+            cat reports/private-key-findings.txt | tee -a reports/security.txt
+            FAILED=1
+          else
+            echo "No private-key header markers found." | tee -a reports/security.txt
+          fi
+          RISKY=$(git ls-files | grep -Ei '(^|/)(\.env|id_rsa|id_ed25519|credentials\.json|secrets?\.(json|ya?ml))$' || true)
+          if [ -n "$RISKY" ]; then
+            echo "Review potentially sensitive tracked paths:" | tee -a reports/security.txt
+            echo "$RISKY" | tee -a reports/security.txt
+          else
+            echo "No common sensitive filenames detected." | tee -a reports/security.txt
+          fi
+          cat reports/security.txt >> "$GITHUB_STEP_SUMMARY"
+          exit "$FAILED"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nebula-security-inspection
+          path: reports/
+
+  dependency-analysis:
+    name: "04 · DEPENDENCY ANALYSIS"
+    needs: boot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Inventory dependency manifests"
+        run: |
+          mkdir -p reports
+          {
+            echo "# Dependency analysis"
+            find . -maxdepth 5 -type f \( -name 'package.json' -o -name 'package-lock.json' -o -name 'pubspec.yaml' -o -name 'pubspec.lock' -o -name 'pom.xml' -o -name 'build.gradle' -o -name 'build.gradle.kts' -o -name 'requirements.txt' -o -name 'pyproject.toml' -o -name 'Cargo.toml' -o -name 'go.mod' \) -not -path './.git/*' | sort
+          } | tee reports/dependencies.txt
+          cat reports/dependencies.txt >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nebula-dependency-analysis
+          path: reports/dependencies.txt
+
+  build-intelligence:
+    name: "05 · BUILD INTELLIGENCE"
+    needs: boot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Detect build ecosystems"
+        run: |
+          mkdir -p reports
+          {
+            echo "# Build intelligence"
+            for f in package.json pubspec.yaml pom.xml build.gradle build.gradle.kts settings.gradle settings.gradle.kts Cargo.toml go.mod Makefile CMakeLists.txt; do
+              [ ! -f "$f" ] || echo "Detected: $f"
+            done
+            echo ""
+            echo "Discovery-only lane: project-specific builds can be enabled when the relevant toolchain is configured."
+          } | tee reports/build.txt
+          cat reports/build.txt >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nebula-build-intelligence
+          path: reports/build.txt
+
+  matrix-lab:
+    name: "06 · MATRIX LAB / ${{ matrix.lane }}"
+    needs: boot
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [LINUX, WINDOWS, ANDROID, FLUTTER, WEB, NODE, PYTHON, DOCS]
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Execute lane probe"
+        env:
+          LANE: ${{ matrix.lane }}
+        run: |
+          mkdir -p reports
+          {
+            echo "# $LANE lane"
+            echo "Runner: $RUNNER_OS"
+            echo "Repository SHA: $GITHUB_SHA"
+            case "$LANE" in
+              ANDROID) find . -maxdepth 5 \( -name gradlew -o -name build.gradle -o -name build.gradle.kts \) -print | head -30 ;;
+              FLUTTER) find . -maxdepth 5 \( -name pubspec.yaml -o -name analysis_options.yaml \) -print | head -30 ;;
+              WEB|NODE) find . -maxdepth 5 \( -name package.json -o -name vite.config.js -o -name vite.config.ts \) -print | head -30 ;;
+              PYTHON) find . -maxdepth 5 \( -name pyproject.toml -o -name requirements.txt -o -name setup.py \) -print | head -30 ;;
+              DOCS) find . -maxdepth 4 -type f -iname '*.md' -print | head -30 ;;
+              *) echo "Environment probe completed." ;;
+            esac
+          } | tee "reports/$LANE.txt"
+          cat "reports/$LANE.txt" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nebula-lane-${{ matrix.lane }}
+          path: reports/
+
+  analytics:
+    name: "07 · PERFORMANCE & ANALYTICS"
+    needs: [repository-intelligence, matrix-lab]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: "Calculate repository signals"
+        run: |
+          {
+            echo "# Performance & analytics"
+            echo "Tracked files: $(git ls-files | wc -l)"
+            echo "Commit count: $(git rev-list --count HEAD)"
+            echo "Repository size: $(du -sh . --exclude=.git | cut -f1)"
+            echo "Recent activity:"
+            git log -5 --date=short --format='- %h · %ad · %s'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  report:
+    name: "08 · REPORT GENERATION"
+    if: always()
+    needs: [repository-intelligence, security-inspection, dependency-analysis, build-intelligence, matrix-lab, analytics]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Compile mission report"
+        env:
+          REPOSITORY: ${{ needs.repository-intelligence.result }}
+          SECURITY: ${{ needs.security-inspection.result }}
+          DEPENDENCIES: ${{ needs.dependency-analysis.result }}
+          BUILD: ${{ needs.build-intelligence.result }}
+          MATRIX: ${{ needs.matrix-lab.result }}
+          ANALYTICS: ${{ needs.analytics.result }}
+        run: |
+          mkdir -p final-report
+          {
+            echo "# 🌌 NEBULA Full System Scan"
+            echo ""
+            echo "| Subsystem | Result |"
+            echo "|---|---|"
+            echo "| Repository intelligence | $REPOSITORY |"
+            echo "| Security inspection | $SECURITY |"
+            echo "| Dependency analysis | $DEPENDENCIES |"
+            echo "| Build intelligence | $BUILD |"
+            echo "| Matrix lab (8 lanes) | $MATRIX |"
+            echo "| Performance & analytics | $ANALYTICS |"
+            echo ""
+            echo "Run: $GITHUB_RUN_NUMBER"
+            echo "Commit: $GITHUB_SHA"
+            echo "Generated: $(date -u +%FT%TZ)"
+          } | tee final-report/NEBULA-REPORT.md
+          cat final-report/NEBULA-REPORT.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nebula-full-system-report
+          path: final-report/
+
+  final-verification:
+    name: "09 · FINAL VERIFICATION"
+    if: always()
+    needs: [security-inspection, report]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Close mission"
+        env:
+          SECURITY: ${{ needs.security-inspection.result }}
+          REPORT: ${{ needs.report.result }}
+        run: |
+          {
+            echo "# 🛰️ Mission closeout"
+            echo "| Gate | Status |"
+            echo "|---|---|"
+            echo "| Security inspection | $SECURITY |"
+            echo "| Report publication | $REPORT |"
+            echo ""
+            echo "Mission complete. Review failed lanes and download the report artifact."
+          } >> "$GITHUB_STEP_SUMMARY"
