@@ -1,13 +1,13 @@
-name: "NEBULA · Matrix Engine"
+name: "NEBULA // CONSTELLATION MATRIX"
 
 on:
   workflow_dispatch:
     inputs:
       profile:
-        description: "Execution profile"
+        description: "Mission depth"
         type: choice
         required: true
-        default: DEEP
+        default: QUICK
         options: [QUICK, DEEP]
   pull_request:
     branches: [main]
@@ -16,84 +16,117 @@ permissions:
   contents: read
 
 concurrency:
-  group: nebula-matrix-${{ github.ref }}
+  group: nebula-constellation-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  boot:
+    name: "✦ 00 · STAR GATE / INITIALIZATION"
+    runs-on: ubuntu-latest
+    outputs:
+      profiles: ${{ github.event_name == 'workflow_dispatch' && inputs.profile == 'DEEP' && '["QUICK","DEEP"]' || '["QUICK"]' }}
+    steps:
+      - name: "Open mission channel"
+        run: |
+          {
+            echo "# ✦ NEBULA CONSTELLATION"
+            echo ""
+            echo "| Mission signal | Value |"
+            echo "|---|---|"
+            echo "| Trigger | $GITHUB_EVENT_NAME |"
+            echo "| Ref | $GITHUB_REF |"
+            echo "| Commit | $GITHUB_SHA |"
+            echo "| Runner | $RUNNER_OS / $RUNNER_ARCH |"
+            echo ""
+            echo "Star gate initialized. Subsystems are cleared for launch."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   matrix:
-    name: "${{ matrix.domain }} · ${{ matrix.profile }}"
+    name: "${{ matrix.domain }} / ${{ matrix.profile }}"
+    needs: boot
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       max-parallel: 8
       matrix:
         domain: [REPOSITORY, SECURITY, DEPENDENCIES, BUILD, PERFORMANCE, RELEASE, DOCUMENTATION, AUTOMATION]
-        profile: [QUICK, DEEP]
+        profile: ${{ fromJSON(needs.boot.outputs.profiles) }}
     steps:
-      - name: "Initialize lane"
+      - name: "Initialize subsystem"
         run: |
-          echo "## ${{ matrix.domain }} / ${{ matrix.profile }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Mission: ${{ github.workflow }}"
-          echo "Run: ${{ github.run_number }} · Attempt: ${{ github.run_attempt }}"
+          echo "## ${{ matrix.domain }} · ${{ matrix.profile }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Subsystem online · run $GITHUB_RUN_NUMBER · attempt $GITHUB_RUN_ATTEMPT"
 
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: "Execute operational scan"
+      - name: "Execute subsystem scan"
         env:
           DOMAIN: ${{ matrix.domain }}
           PROFILE: ${{ matrix.profile }}
         shell: bash
         run: |
           set -uo pipefail
-          mkdir -p nebula-report
+          mkdir -p "nebula-report/$DOMAIN"
+          REPORT="nebula-report/$DOMAIN/result.txt"
           case "$DOMAIN" in
             REPOSITORY)
-              echo "Tracked files: $(git ls-files | wc -l)" | tee nebula-report/result.txt
-              echo "Directories: $(find . -type d -not -path './.git*' | wc -l)" | tee -a nebula-report/result.txt
-              git log -1 --format='Latest commit: %h %s' | tee -a nebula-report/result.txt || true
+              {
+                echo "Tracked files: $(git ls-files | wc -l)"
+                echo "Directories: $(find . -type d -not -path './.git*' | wc -l)"
+                git log -1 --format='Latest commit: %h %s' || true
+              } | tee "$REPORT"
               ;;
             SECURITY)
-              if git grep -n -I -E 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' -- . ':!*.lock' > nebula-report/findings.txt; then
-                echo "Potential private-key marker found; inspect artifact." | tee nebula-report/result.txt
-                cat nebula-report/findings.txt
+              if git grep -n -I -E 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' -- . ':!*.lock' > "nebula-report/$DOMAIN/findings.txt"; then
+                echo "Potential private-key marker found. Inspect findings artifact." | tee "$REPORT"
+                cat "nebula-report/$DOMAIN/findings.txt"
                 exit 1
               else
-                echo "No private-key markers detected." | tee nebula-report/result.txt
+                echo "No private-key markers detected in tracked text." | tee "$REPORT"
               fi
               ;;
             DEPENDENCIES)
-              find . -maxdepth 5 -type f \( -name 'package.json' -o -name 'package-lock.json' -o -name 'pubspec.yaml' -o -name 'pubspec.lock' -o -name 'pom.xml' -o -name 'build.gradle' -o -name 'build.gradle.kts' -o -name 'requirements.txt' -o -name 'pyproject.toml' \) -not -path './.git/*' | sort | tee nebula-report/result.txt
+              find . -maxdepth 6 -type f \( -name 'package.json' -o -name '*lock*' -o -name 'pubspec.yaml' -o -name 'pom.xml' -o -name 'build.gradle' -o -name 'build.gradle.kts' -o -name 'requirements.txt' -o -name 'pyproject.toml' -o -name 'Cargo.toml' -o -name 'go.mod' \) -not -path './.git/*' | sort | tee "$REPORT"
               ;;
             BUILD)
-              for f in package.json pubspec.yaml pom.xml build.gradle build.gradle.kts settings.gradle settings.gradle.kts Cargo.toml go.mod; do
+              for f in package.json pubspec.yaml pom.xml build.gradle build.gradle.kts settings.gradle settings.gradle.kts Cargo.toml go.mod Makefile CMakeLists.txt; do
                 [ ! -f "$f" ] || echo "Detected build manifest: $f"
-              done | tee nebula-report/result.txt
-              [ -s nebula-report/result.txt ] || echo "No supported root build manifest detected." > nebula-report/result.txt
+              done | tee "$REPORT"
+              [ -s "$REPORT" ] || echo "No supported root build manifest detected." > "$REPORT"
               ;;
             PERFORMANCE)
-              echo "Repository footprint: $(du -sh . --exclude=.git | cut -f1)" | tee nebula-report/result.txt
-              echo "Tracked files: $(git ls-files | wc -l)" | tee -a nebula-report/result.txt
-              echo "Commit count: $(git rev-list --count HEAD)" | tee -a nebula-report/result.txt
+              {
+                echo "Repository footprint: $(du -sh . --exclude=.git | cut -f1)"
+                echo "Tracked files: $(git ls-files | wc -l)"
+                echo "Commit count: $(git rev-list --count HEAD)"
+              } | tee "$REPORT"
               ;;
             RELEASE)
-              echo "Current ref: $GITHUB_REF" | tee nebula-report/result.txt
-              echo "Latest tag: $(git describe --tags --abbrev=0 2>/dev/null || echo 'No tags found')" | tee -a nebula-report/result.txt
+              {
+                echo "Current ref: $GITHUB_REF"
+                echo "Latest tag: $(git describe --tags --abbrev=0 2>/dev/null || echo 'No tags found')"
+              } | tee "$REPORT"
               ;;
             DOCUMENTATION)
               for f in README.md CONTRIBUTING.md CODE_OF_CONDUCT.md SECURITY.md LICENSE; do
                 [ -f "$f" ] && echo "PRESENT $f" || echo "MISSING $f"
-              done | tee nebula-report/result.txt
+              done | tee "$REPORT"
               ;;
             AUTOMATION)
-              find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) 2>/dev/null | sort | tee nebula-report/result.txt || true
+              find .github/workflows -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) 2>/dev/null | sort | tee "$REPORT" || true
               ;;
           esac
           if [ "$PROFILE" = "DEEP" ]; then
-            printf '\nBranch: %s\nSHA: %s\nRunner: %s/%s\n' "$GITHUB_REF_NAME" "$GITHUB_SHA" "$RUNNER_OS" "$RUNNER_ARCH" >> nebula-report/result.txt
+            {
+              echo ""
+              echo "Branch: $GITHUB_REF_NAME"
+              echo "SHA: $GITHUB_SHA"
+              echo "Runner: $RUNNER_OS/$RUNNER_ARCH"
+            } >> "$REPORT"
           fi
-          cat nebula-report/result.txt >> "$GITHUB_STEP_SUMMARY"
+          cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -102,26 +135,51 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  mission-control:
-    name: "MISSION CONTROL · Matrix aggregation"
+  signal-analysis:
+    name: "✧ 02 · SIGNAL ANALYSIS"
     if: always()
-    needs: [matrix]
+    needs: [boot, matrix]
     runs-on: ubuntu-latest
     steps:
-      - name: "Render mission summary"
+      - name: "Evaluate subsystem constellation"
         env:
-          RESULT: ${{ needs.matrix.result }}
+          MATRIX_RESULT: ${{ needs.matrix.result }}
+          PROFILE_SET: ${{ needs.boot.outputs.profiles }}
         run: |
           {
-            echo "# 🌌 NEBULA MATRIX ENGINE"
+            echo "# ✧ SIGNAL ANALYSIS"
             echo ""
-            echo "| Signal | Value |"
+            echo "| Signal | Reading |"
             echo "|---|---|"
-            echo "| Matrix result | **$RESULT** |"
+            echo "| Matrix status | $MATRIX_RESULT |"
+            echo "| Active profiles | $PROFILE_SET |"
             echo "| Domains | 8 |"
-            echo "| Profiles | QUICK · DEEP |"
-            echo "| Planned lanes | 16 |"
+            echo "| Planned lanes | 8 × selected profiles |"
             echo "| Run | $GITHUB_RUN_NUMBER |"
             echo ""
-            echo "Inspect the expanded matrix lanes and download each lane artifact."
+            echo "Subsystem results are ready for mission control."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  mission-control:
+    name: "◈ 03 · MISSION CONTROL / FINAL SYNTHESIS"
+    if: always()
+    needs: [boot, matrix, signal-analysis]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Close constellation"
+        env:
+          BOOT_RESULT: ${{ needs.boot.result }}
+          MATRIX_RESULT: ${{ needs.matrix.result }}
+          ANALYSIS_RESULT: ${{ needs.signal-analysis.result }}
+        run: |
+          {
+            echo "# ◈ NEBULA MISSION CONTROL"
+            echo ""
+            echo "| Stage | Result |"
+            echo "|---|---|"
+            echo "| Star gate | $BOOT_RESULT |"
+            echo "| Constellation matrix | $MATRIX_RESULT |"
+            echo "| Signal analysis | $ANALYSIS_RESULT |"
+            echo ""
+            echo "Mission synthesis complete. Inspect individual subsystem jobs and artifacts for evidence."
           } >> "$GITHUB_STEP_SUMMARY"
